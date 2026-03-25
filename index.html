@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Boletim Oficial</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
+
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    
+    <style>
+        :root { --primary: #000000; --bg: #f4f7f6; --accent: #d32f2f; }
+        
+        /* Interface do Sistema */
+        @media screen {
+            body { font-family: 'Montserrat', sans-serif; margin: 0; background: var(--bg); display: flex; height: 100vh; overflow: hidden; }
+            #editor-panel { width: 40%; padding: 25px; border-right: 1px solid #ccc; background: #fff; overflow-y: auto; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
+            #preview-panel { width: 60%; padding: 40px 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: #525659; }
+            #render-area { background: white; box-shadow: 0 0 30px rgba(0,0,0,0.4); width: 650px; transition: all 0.3s ease; }
+            .no-print { display: block; }
+        }
+
+        /* Ajustes Finais para PDF (A4 Full Selecionável) */
+        @media print {
+            @page { margin: 0; size: A4; }
+            body { margin: 0; padding: 0; background: white; font-family: 'Montserrat', Arial, sans-serif !important; }
+            .no-print { display: none !important; }
+            #preview-panel { padding: 0; margin: 0; width: 100%; height: 100%; display: block; background: white; }
+            #render-area { width: 100% !important; max-width: 100% !important; box-shadow: none !important; border: none !important; }
+            #tabela-principal { width: 100% !important; border: none !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+
+        /* Elementos Visuais do Editor */
+        h2 { font-weight: 800; color: var(--primary); margin-top: 0; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        .section-box { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; position: relative; }
+        .quill-editor { background: white; height: 150px; margin-bottom: 10px; font-family: 'Montserrat', sans-serif !important; }
+        
+        label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #666; display: block; margin-bottom: 5px; }
+        input[type="text"] { font-family: 'Montserrat', sans-serif; width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 12px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="color"] { width: 60px; height: 35px; border: 1px solid #ccc; cursor: pointer; margin-bottom: 10px; }
+
+        .btn { font-family: 'Montserrat', sans-serif; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; margin-bottom: 10px; width: 100%; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; }
+        .btn-add { background: #292929; color: white; }
+        .btn-add:hover { background: #464646; }
+        .btn-export { background: #28a745; color: white; }
+        .btn-export:hover { background: #218838; }
+        .btn-pdf { background: #e67e22; color: white; }
+        .btn-pdf:hover { background: #d35400; }
+        .btn-remove { background: #dc3545; color: white; width: auto; font-size: 10px; position: absolute; top: 10px; right: 10px; padding: 5px 10px; }
+        
+        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div id="editor-panel" class="no-print">
+    <h2>Editor do Boletim</h2>
+
+    <div class="section-box" style="border: 1px solid #000000;">
+        <label>Seção de Destaques (Opcional)</label>
+        <input type="text" id="data-destaque" placeholder="Data ex: 23 de março de 2026" oninput="atualizarPreview()">
+        <input type="text" id="titulo-destaques" placeholder="Texto em destaque" oninput="atualizarPreview()">
+        <div id="quill-destaques" class="quill-editor"></div>
+    </div>
+
+    <div id="lista-materias"></div>
+    
+    <button class="btn btn-add" onclick="adicionarMateria()">Adicionar Nova Matéria</button>
+    <hr>
+    <button class="btn btn-export" onclick="exportarEmail()">Copiar para E-mail </button>
+    <button class="btn btn-pdf" onclick="window.print()">Gerar PDF</button>
+    <p style="font-size: 11px; color: #888; text-align: center;">Dica: No PDF, selecione "Salvar como PDF" e "Nenhuma margem" no destino da impressão.</p>
+</div>
+
+<div id="preview-panel">
+    <div id="render-area">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="650" id="tabela-principal" style="border-collapse: collapse; background-color: #ffffff; font-family: 'Montserrat', Arial, sans-serif; width: 650px;">
+            <tr>
+                <td align="center" bgcolor="#FFFFFF" style="padding: 20px 20px; color: #ffffff; font-family: 'Montserrat', Arial, sans-serif; font-size: 30px; font-weight: 800; text-transform: uppercase; letter-spacing: 3px;">
+                     <img src="https://rj.digital.grupoinpress.com.br//emails/2026/gip/boletim-especial/img/topo.jpg" alt="Grupo In Press" style="max-width: 650px; width: 100%;">
+                </td>
+            </tr>
+            
+            <tr>
+                <td style="padding: 0px 30px 30px 30px; font-family: 'Montserrat', Arial, sans-serif;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" id="corpo-boletim">
+                        </table>
+                </td>
+            </tr>
+
+            <tr>
+                <td align="center" bgcolor="#000000" style="color: #ffffff; font-family: 'Montserrat', Arial, sans-serif; font-size: 12px; font-weight: 400; letter-spacing: 1px;">
+                    <img src="https://rj.digital.grupoinpress.com.br//emails/2026/gip/boletim-especial/img/rodape.jpg" alt="Grupo In Press" style="max-width: 650px; width: 100%;">
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<script>
+    let materias = [];
+    let editorDestaques;
+    const toolbarOptions = [['bold', 'italic', 'underline', 'link'], [{ 'color': [] }], [{ 'list': 'bullet' }], ['clean']];
+
+    // --- COLOQUE O LINK DA SUA IMAGEM ABAIXO ---
+    const URL_IMAGEM_FIXA = "https://rj.digital.grupoinpress.com.br//emails/2026/gip/boletim-especial/img/perfil_fabio_zambeli.jpg";
+
+    function init() {
+        // Inicializa Destaques
+        editorDestaques = new Quill('#quill-destaques', { theme: 'snow', modules: { toolbar: toolbarOptions } });
+        editorDestaques.on('text-change', atualizarPreview);
+        
+        // Inicializa com uma matéria
+        adicionarMateria();
+    }
+
+    function adicionarMateria() {
+        const id = Date.now();
+        materias.push({ id, titulo: "Título", texto: "", corFundo: "#ffffff" });
+        renderizarListaMaterias();
+    }
+
+    function renderizarListaMaterias() {
+        const lista = document.getElementById('lista-materias');
+        lista.innerHTML = '';
+        
+        materias.forEach((m, index) => {
+            const div = document.createElement('div');
+            div.className = 'section-box';
+            div.innerHTML = `
+                <button class="btn btn-remove" onclick="remover(${index})">Excluir</button>
+                <label>Título da Matéria:</label>
+                <input type="text" value="${m.titulo}" oninput="atualizarDados(${index}, 'titulo', this.value)">
+                <label>Cor de Fundo:</label>
+                <input type="color" value="${m.corFundo}" onchange="atualizarDados(${index}, 'corFundo', this.value)">
+                <div id="editor-${m.id}" class="quill-editor"></div>
+            `;
+            lista.appendChild(div);
+
+            const quill = new Quill(`#editor-${m.id}`, { theme: 'snow', modules: { toolbar: toolbarOptions } });
+            quill.root.innerHTML = m.texto;
+            quill.on('text-change', () => {
+                materias[index].texto = quill.root.innerHTML;
+                atualizarPreview();
+            });
+        });
+        atualizarPreview();
+    }
+
+    function atualizarDados(i, campo, valor) {
+        materias[i][campo] = valor;
+        atualizarPreview();
+    }
+
+    function remover(i) {
+        materias.splice(i, 1);
+        renderizarListaMaterias();
+    }
+
+    function atualizarPreview() {
+        const corpo = document.getElementById('corpo-boletim');
+        const dDest = document.getElementById('data-destaque').value;
+        const tDest = document.getElementById('titulo-destaques').value;
+        const cDest = editorDestaques ? editorDestaques.root.innerHTML : '';
+        let html = "";
+
+        // Render Destaques
+        if (dDest || (cDest !== '<p><br></p>')) {
+
+            html += `
+                <tr>
+                    <td bgcolor="#FFFFFF" style="padding: 25px 25px 0px 25px; border: 1px solid #000; border-radius: 5px; font-family: 'Montserrat', Arial, sans-serif;">
+                        ${dDest ? `<span style="background: #000000; color: #ffffff; padding: 4px 12px; font-size: 14px; font-weight: 700; text-transform: uppercase;">${dDest}</span><br><br>` : ''}
+                        <div style="font-size: 20px; font-weight: 700; margin-bottom: 0px; color: #000;">${tDest}</div>
+                        <div style="font-size: 16px; color: #444; line-height: 1.6; margin-top: -15px;">${cDest}</div>
+                    </td>
+                </tr>
+                <tr><td style="padding: 10px;"></td></tr>`;
+        }
+
+        // 2. IMAGEM FIXA (Entre destaques e matérias)
+        html += `<tr><td style="padding-bottom: 15px;">
+                    <img src="${URL_IMAGEM_FIXA}" alt="Banner" width="100%" style="display: block; width: 100%; max-width: 100%; height: auto; border-radius: 5px;">
+                 </td></tr>`;
+
+        // Render Matérias
+        materias.forEach(m => {
+
+            // CONDIÇÃO DE PADDING: Se a cor for diferente de branco, aplica padding extra e borda
+            const estiloDinamico = m.corFundo.toLowerCase() !== "#ffffff" 
+                ? `padding: 15px; border-radius: 5px;` 
+                : `padding: 0px; border-bottom: 0px solid #f0f0f0;`;
+
+            html += `
+                <tr>
+                    <td bgcolor="${m.corFundo}" style="${estiloDinamico} border-bottom: 1px solid #f0f0f0; font-family: 'Montserrat', Arial, sans-serif;">
+                        <div style="color: #d23c2f; font-size: 24px; font-weight: 700; margin-bottom: 15px;">${m.titulo}</div>
+                        <div style="color: #333333; font-size: 16px; line-height: 1.4;">${m.texto}</div>
+                    </td>
+                </tr>
+                <tr><td style="padding: 10px;"></td></tr>`;
+        });
+
+        corpo.innerHTML = html;
+    }
+
+    function exportarEmail() {
+        const tabela = document.getElementById('tabela-principal');
+        tabela.setAttribute('width', '650');
+        tabela.style.width = "650px";
+        
+        const range = document.createRange();
+        range.selectNode(document.getElementById('render-area'));
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        alert("Boletim copiado com Montserrat e 650px de largura! Cole no seu e-mail.");
+    }
+
+    // Inicialização do Sistema
+    init();
+</script>
+
+</body>
+</html>
