@@ -3,65 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Boletim Oficial</title>
+    <title>Gerador de Boletim Oficial - GIP</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
 
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <script src="https://unpkg.com/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
-        :root { --primary: #000000; --bg: #f4f7f6; --accent: #d32f2f; }
+        :root { --primary: #000000; --bg: #f4f7f6; --accent: #d23c2f; }
         
-        /* Interface do Sistema */
         @media screen {
             body { font-family: 'Montserrat', sans-serif; margin: 0; background: var(--bg); display: flex; height: 100vh; overflow: hidden; }
-            #editor-panel { width: 40%; padding: 25px; border-right: 1px solid #ccc; background: #fff; overflow-y: auto; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
-            #preview-panel { width: 60%; padding: 40px 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: #525659; }
-            #render-area { background: white; box-shadow: 0 0 30px rgba(0,0,0,0.4); width: 650px; transition: all 0.3s ease; }
+            #editor-panel { width: 40%; padding: 2% 5%; border-right: 0px solid #ccc; background: ##dedee2; overflow-y: auto; box-shadow: 2px 0 10px rgba(0,0,0,0.05); font-family: 'Arial', sans-serif; }
+            #preview-panel { width: 60%; padding: 40px 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: #fcfcfc; }
+            #render-area { background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 650px; transition: all 0.3s ease; }
             .no-print { display: block; }
         }
 
-        /* Ajustes Finais para PDF (A4 Full Selecionável) */
-        @media print {
-            @page { margin: 0; size: A4; }
-            body { margin: 0; padding: 0; background: white; font-family: 'Montserrat', Arial, sans-serif !important; }
-            .no-print { display: none !important; }
-            #preview-panel { padding: 0; margin: 0; width: 100%; height: 100%; display: block; background: white; }
-            #render-area { width: 100% !important; max-width: 100% !important; box-shadow: none !important; border: none !important; }
-            #tabela-principal { width: 100% !important; border: none !important; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        }
-
-        /* Elementos Visuais do Editor */
-        h2 { font-weight: 800; color: var(--primary); margin-top: 0; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
-        .section-box { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; position: relative; }
-        .quill-editor { background: white; height: 150px; margin-bottom: 10px; font-family: 'Montserrat', sans-serif !important; }
+        h2 { font-weight: 800; color: var(--primary); margin-top: 0; border-bottom: 1px solid var(--primary); padding-bottom: 10px; }
+        .section-box { background: #fcfcfc; padding: 25px; box-shadow: 0 0 15px rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 20px; position: relative; }
+        .quill-editor { background: white; height: 200px; margin-bottom: 10px; font-family: 'Montserrat', sans-serif !important; }
         
-        label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #666; display: block; margin-bottom: 5px; }
-        input[type="text"] { font-family: 'Montserrat', sans-serif; width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 12px; border: 1px solid #ccc; border-radius: 4px; }
-        input[type="color"] { width: 60px; height: 35px; border: 1px solid #ccc; cursor: pointer; margin-bottom: 10px; }
+        label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #000; display: block; margin-bottom: 5px; margin-top: 10px; }
+        input[type="text"], select { font-family: 'Montserrat', sans-serif; width: 100%; box-sizing: border-box; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="color"] { width: 60px; height: 35px; border: 1px solid #ccc; cursor: pointer; margin-bottom: 5px; display: block; }
+        input[type="file"] { margin-bottom: 10px; font-size: 12px; }
 
-        .btn { font-family: 'Montserrat', sans-serif; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; margin-bottom: 10px; width: 100%; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; }
-        .btn-add { background: #292929; color: white; }
-        .btn-add:hover { background: #464646; }
+        .btn { font-family: 'Montserrat', sans-serif; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; margin-bottom: 10px; width: 100%; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; text-align: center; }
+        .btn-add { background: #0075ea; color: white; }
+        .btn-add:hover { background: #015db9; }
         .btn-export { background: #28a745; color: white; }
         .btn-export:hover { background: #218838; }
-        .btn-pdf { background: #e67e22; color: white; }
+        .btn-pdf { background: #ff8400; color: white; }
         .btn-pdf:hover { background: #d35400; }
-        .btn-remove { background: #dc3545; color: white; width: auto; font-size: 10px; position: absolute; top: 10px; right: 10px; padding: 5px 10px; }
+        .btn-remove { background: #dc3545; color: white; width: auto; font-size: 10px; position: absolute; top: 10px; right: 10px; padding: 10px; }
+        .btn-clear { background: #e60000; color: white; margin-top: 20px; font-size: 11px; padding: 8px; width: auto; display: block; margin-left: auto; margin-right: auto; }
         
         hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+        
+        .img-preview-box { background: #eee; padding: 5px; border-radius: 4px; text-align: center; margin-bottom: 10px; }
+        .img-preview-box img { max-height: 80px; max-width: 100%; }
+        
+        .ql-editor { word-break: break-word; overflow-wrap: break-word; }
+        .ql-editor img { max-width: 100%; height: auto; }
+        .ql-image-resize-handler { background-color: var(--accent) !important; border: 1px solid white !important; }
     </style>
 </head>
 <body>
 
 <div id="editor-panel" class="no-print">
-    <h2>Editor do Boletim</h2>
+    <h2>EDITOR</h2>
 
-    <div class="section-box" style="border: 1px solid #000000;">
+    <div class="section-box" style="border-top: 10px solid #d23c2f;">
         <label>Seção de Destaques (Opcional)</label>
         <input type="text" id="data-destaque" placeholder="Data ex: 23 de março de 2026" oninput="atualizarPreview()">
         <input type="text" id="titulo-destaques" placeholder="Texto em destaque" oninput="atualizarPreview()">
@@ -70,32 +70,35 @@
 
     <div id="lista-materias"></div>
     
-    <button class="btn btn-add" onclick="adicionarMateria()">Adicionar Nova Matéria</button>
+    <button class="btn btn-add" onclick="adicionarMateria()">➕ Adicionar Nova Matéria</button>
     <hr>
-    <button class="btn btn-export" onclick="exportarEmail()">Copiar para E-mail </button>
-    <button class="btn btn-pdf" onclick="window.print()">Gerar PDF</button>
-    <p style="font-size: 11px; color: #888; text-align: center;">Dica: No PDF, selecione "Salvar como PDF" e "Nenhuma margem" no destino da impressão.</p>
+    <button id="btn-gerar-pdf" class="btn btn-pdf" onclick="gerarPDFUnico()">📥 Baixar PDF</button>
+    
+    <button class="btn btn-export" onclick="exportarEmail()">📋 Copiar para E-mail</button>
+    
+    <button class="btn btn-clear" onclick="limparRascunho()">🗑️ Apagar rascunho</button>
+   
 </div>
 
 <div id="preview-panel">
     <div id="render-area">
-        <table align="center" border="0" cellpadding="0" cellspacing="0" width="650" id="tabela-principal" style="border-collapse: collapse; background-color: #ffffff; font-family: 'Montserrat', Arial, sans-serif; width: 650px;">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="650" id="tabela-principal" style="table-layout: fixed; border-collapse: collapse; background-color: #ffffff; font-family: 'Montserrat', Arial, sans-serif; width: 650px; max-width: 650px; word-wrap: break-word; overflow-wrap: break-word;">
             <tr>
-                <td align="center" bgcolor="#FFFFFF" style="padding: 20px 20px; color: #ffffff; font-family: 'Montserrat', Arial, sans-serif; font-size: 30px; font-weight: 800; text-transform: uppercase; letter-spacing: 3px;">
-                     <img src="https://rj.digital.grupoinpress.com.br//emails/2026/gip/boletim-especial/img/topo.jpg" alt="Grupo In Press" style="max-width: 650px; width: 100%;">
+                <td align="center" bgcolor="#FFFFFF" style="padding: 20px; font-family: 'Montserrat', Arial, sans-serif;">
+                     <img src="https://raw.githubusercontent.com/InPressPNI/boletim_gip/refs/heads/main/topo.jpg" alt="Grupo In Press" style="max-width: 650px; width: 100%; display: block;">
                 </td>
             </tr>
             
             <tr>
                 <td style="padding: 0px 30px 30px 30px; font-family: 'Montserrat', Arial, sans-serif;">
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%" id="corpo-boletim">
-                        </table>
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" id="corpo-boletim" style="table-layout: fixed; width: 100%;">
+                    </table>
                 </td>
             </tr>
 
             <tr>
-                <td align="center" bgcolor="#000000" style="color: #ffffff; font-family: 'Montserrat', Arial, sans-serif; font-size: 12px; font-weight: 400; letter-spacing: 1px;">
-                    <img src="https://rj.digital.grupoinpress.com.br//emails/2026/gip/boletim-especial/img/rodape.jpg" alt="Grupo In Press" style="max-width: 650px; width: 100%;">
+                <td align="center" bgcolor="#000000" style="padding: 0; font-family: 'Montserrat', Arial, sans-serif;">
+                    <img src="https://raw.githubusercontent.com/InPressPNI/boletim_gip/refs/heads/main/rodape.jpg" alt="Grupo In Press" style="max-width: 650px; width: 100%; display: block;">
                 </td>
             </tr>
         </table>
@@ -105,23 +108,97 @@
 <script>
     let materias = [];
     let editorDestaques;
-    const toolbarOptions = [['bold', 'italic', 'underline', 'link'], [{ 'color': [] }], [{ 'list': 'bullet' }], ['clean']];
+    
+    const toolbarOptions = [
+        ['bold', 'italic', 'underline', 'link'], 
+        [{ 'color': [] }], 
+        [{ 'list': 'bullet' }], 
+        ['clean']
+    ];
 
-    // --- COLOQUE O LINK DA SUA IMAGEM ABAIXO ---
-    const URL_IMAGEM_FIXA = "https://rj.digital.grupoinpress.com.br//emails/2026/gip/boletim-especial/img/perfil_fabio_zambeli.jpg";
+    const URL_IMAGEM_FIXA = "https://raw.githubusercontent.com/InPressPNI/boletim_gip/refs/heads/main/perfil_fabio_zambeli.jpg";
+    const MAX_IMAGE_SIZE_MB = 1;
 
     function init() {
-        // Inicializa Destaques
         editorDestaques = new Quill('#quill-destaques', { theme: 'snow', modules: { toolbar: toolbarOptions } });
-        editorDestaques.on('text-change', atualizarPreview);
-        
-        // Inicializa com uma matéria
-        adicionarMateria();
+
+        const rascunho = localStorage.getItem('rascunho_boletim');
+        if (rascunho) {
+            try {
+                const dados = JSON.parse(rascunho);
+                document.getElementById('data-destaque').value = dados.dataDestaque || '';
+                document.getElementById('titulo-destaques').value = dados.tituloDestaque || '';
+                editorDestaques.root.innerHTML = dados.textoDestaque || '';
+                materias = dados.materias || [];
+            } catch (e) { console.error("Erro ao carregar rascunho."); }
+        }
+
+        if (materias.length === 0) {
+            adicionarMateria();
+        } else {
+            renderizarListaMaterias();
+        }
+
+        editorDestaques.on('text-change', () => { salvarRascunho(); });
+        atualizarPreview();
+    }
+
+    function salvarRascunho() {
+        const dados = {
+            dataDestaque: document.getElementById('data-destaque').value,
+            tituloDestaque: document.getElementById('titulo-destaques').value,
+            textoDestaque: editorDestaques.root.innerHTML,
+            materias: materias
+        };
+        try {
+            localStorage.setItem('rascunho_boletim', JSON.stringify(dados));
+        } catch (e) {
+            console.warn("Rascunho excedeu a memória local.");
+        }
+        atualizarPreview();
+    }
+
+    function limparRascunho() {
+        if(confirm("🗑️ Deseja realmente apagar todo o conteúdo e começar do zero? Essa ação não pode ser desfeita.")) {
+            localStorage.removeItem('rascunho_boletim');
+            location.reload();
+        }
     }
 
     function adicionarMateria() {
         const id = Date.now();
-        materias.push({ id, titulo: "Título", texto: "", corFundo: "#ffffff" });
+        materias.push({ id, titulo: "Título", texto: "", corFundo: "#ffffff", layout: "text-only", imagem: "" });
+        renderizarListaMaterias();
+        salvarRascunho();
+    }
+
+    function uploadImagemMateria(event, index) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const fileSizeMB = file.size / 1024 / 1024;
+        if (fileSizeMB > MAX_IMAGE_SIZE_MB) {
+            alert(`Imagem muito pesada (${fileSizeMB.toFixed(2)}MB). O limite é de ${MAX_IMAGE_SIZE_MB}MB.`);
+            event.target.value = ''; 
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            materias[index].imagem = e.target.result;
+            if (materias[index].layout === "text-only") {
+                materias[index].layout = "img-top";
+            }
+            salvarRascunho();
+            renderizarListaMaterias(); 
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removerImagemMateria(index) {
+        materias[index].imagem = "";
+        materias[index].layout = "text-only";
+        salvarRascunho();
         renderizarListaMaterias();
     }
 
@@ -132,12 +209,44 @@
         materias.forEach((m, index) => {
             const div = document.createElement('div');
             div.className = 'section-box';
+            
+            let previewImagemHtml = '';
+            if (m.imagem) {
+                previewImagemHtml = `
+                    <div class="img-preview-box">
+                        <img src="${m.imagem}">
+                        <br><a href="#" onclick="removerImagemMateria(${index}); return false;" style="color: red; font-size: 10px;">Remover Imagem</a>
+                    </div>
+                `;
+            }
+
             div.innerHTML = `
-                <button class="btn btn-remove" onclick="remover(${index})">Excluir</button>
-                <label>Título da Matéria:</label>
-                <input type="text" value="${m.titulo}" oninput="atualizarDados(${index}, 'titulo', this.value)">
-                <label>Cor de Fundo:</label>
-                <input type="color" value="${m.corFundo}" onchange="atualizarDados(${index}, 'corFundo', this.value)">
+                <button class="btn btn-remove" onclick="remover(${index})">Excluir bloco</button>
+                
+                <label>Título da Matéria (opcional):</label>
+                <input type="text" value="${m.titulo}" oninput="atualizarDadosMateria(${index}, 'titulo', this.value)">
+                
+                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                    <div style="flex: 1;">
+                        <label>Cor do bloco:</label>
+                        <input type="color" value="${m.corFundo}" onchange="atualizarDadosMateria(${index}, 'corFundo', this.value)">
+                    </div>
+                    <div style="flex: 3;">
+                        <label>Layout da Imagem:</label>
+                        <select onchange="atualizarDadosMateria(${index}, 'layout', this.value)">
+                            <option value="text-only" ${m.layout === 'text-only' ? 'selected' : ''}>Apenas Texto / Sem Imagem</option>
+                            <option value="img-top" ${m.layout === 'img-top' ? 'selected' : ''}>Imagem no Topo</option>
+                            <option value="img-left" ${m.layout === 'img-left' ? 'selected' : ''}>Imagem à Esquerda </option>
+                            <option value="img-right" ${m.layout === 'img-right' ? 'selected' : ''}>Imagem à Direita </option>
+                        </select>
+                    </div>
+                </div>
+
+                <label>Carregar Imagem (Máx 1MB):</label>
+                <input type="file" accept="image/*" onchange="uploadImagemMateria(event, ${index})">
+                ${previewImagemHtml}
+
+                <label>Texto da Matéria:</label>
                 <div id="editor-${m.id}" class="quill-editor"></div>
             `;
             lista.appendChild(div);
@@ -146,20 +255,24 @@
             quill.root.innerHTML = m.texto;
             quill.on('text-change', () => {
                 materias[index].texto = quill.root.innerHTML;
-                atualizarPreview();
+                salvarRascunho();
             });
         });
         atualizarPreview();
     }
 
-    function atualizarDados(i, campo, valor) {
+    function atualizarDadosMateria(i, campo, valor) {
         materias[i][campo] = valor;
-        atualizarPreview();
+        salvarRascunho();
+        if (campo === 'layout') {
+            renderizarListaMaterias(); 
+        }
     }
 
     function remover(i) {
         materias.splice(i, 1);
         renderizarListaMaterias();
+        salvarRascunho();
     }
 
     function atualizarPreview() {
@@ -167,40 +280,72 @@
         const dDest = document.getElementById('data-destaque').value;
         const tDest = document.getElementById('titulo-destaques').value;
         const cDest = editorDestaques ? editorDestaques.root.innerHTML : '';
+
         let html = "";
 
-        // Render Destaques
-        if (dDest || (cDest !== '<p><br></p>')) {
-
+        if (dDest || (cDest !== '<p><br></p>' && cDest !== '')) {
             html += `
                 <tr>
                     <td bgcolor="#FFFFFF" style="padding: 25px 25px 0px 25px; border: 1px solid #000; border-radius: 5px; font-family: 'Montserrat', Arial, sans-serif;">
                         ${dDest ? `<span style="background: #000000; color: #ffffff; padding: 4px 12px; font-size: 14px; font-weight: 700; text-transform: uppercase;">${dDest}</span><br><br>` : ''}
-                        <div style="font-size: 20px; font-weight: 700; margin-bottom: 0px; color: #000;">${tDest}</div>
-                        <div style="font-size: 16px; color: #444; line-height: 1.6; margin-top: -15px;">${cDest}</div>
+                        <div style="font-size: 20px; font-weight: 700; margin-bottom: 0px; color: #000; word-wrap: break-word;">${tDest}</div>
+                        <div style="font-size: 16px; color: #444; line-height: 1.6; margin-top: -15px; word-wrap: break-word;">${cDest}</div>
                     </td>
                 </tr>
                 <tr><td style="padding: 10px;"></td></tr>`;
         }
 
-        // 2. IMAGEM FIXA (Entre destaques e matérias)
         html += `<tr><td style="padding-bottom: 15px;">
-                    <img src="${URL_IMAGEM_FIXA}" alt="Banner" width="100%" style="display: block; width: 100%; max-width: 100%; height: auto; border-radius: 5px;">
+                    <img src="${URL_IMAGEM_FIXA}" alt="Banner GIP" width="100%" style="display: block; width: 100%; max-width: 100%; height: auto; border-radius: 5px;">
                  </td></tr>`;
 
-        // Render Matérias
         materias.forEach(m => {
-
-            // CONDIÇÃO DE PADDING: Se a cor for diferente de branco, aplica padding extra e borda
             const estiloDinamico = m.corFundo.toLowerCase() !== "#ffffff" 
                 ? `padding: 15px; border-radius: 5px;` 
                 : `padding: 0px; border-bottom: 0px solid #f0f0f0;`;
 
+            let conteudoMateriaHtml = '';
+            const imgTag = m.imagem ? `<img src="${m.imagem}" style="width: 100%; max-width: 100%; display: block; border-radius: 5px;">` : '';
+            const tituloHtml = `<div style="color: #d23c2f; font-size: 24px; font-weight: 700; margin-bottom: 15px; word-wrap: break-word; color: ${m.corFundo.toLowerCase() !== "#ffffff" ? '#000' : '#d23c2f'};">${m.titulo}</div>`;
+            const textoHtml = `<div style="color: #333333; font-size: 16px; line-height: 1.5; word-wrap: break-word;">${m.texto}</div>`;
+
+            if (m.layout === 'text-only' || !m.imagem) {
+                conteudoMateriaHtml = tituloHtml + textoHtml;
+            } 
+            else if (m.layout === 'img-top') {
+                conteudoMateriaHtml = `
+                    ${tituloHtml}
+                    <div style="margin-bottom: 15px;">${imgTag}</div>
+                    ${textoHtml}
+                `;
+            } 
+            else if (m.layout === 'img-left') {
+                conteudoMateriaHtml = `
+                    ${tituloHtml}
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; width: 100%;">
+                        <tr>
+                            <td width="33%" valign="top" style="padding-right: 15px;">${imgTag}</td>
+                            <td width="67%" valign="top">${textoHtml}</td>
+                        </tr>
+                    </table>
+                `;
+            } 
+            else if (m.layout === 'img-right') {
+                conteudoMateriaHtml = `
+                    ${tituloHtml}
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; width: 100%;">
+                        <tr>
+                            <td width="67%" valign="top" style="padding-right: 15px;">${textoHtml}</td>
+                            <td width="33%" valign="top">${imgTag}</td>
+                        </tr>
+                    </table>
+                `;
+            }
+
             html += `
                 <tr>
-                    <td bgcolor="${m.corFundo}" style="${estiloDinamico} border-bottom: 1px solid #f0f0f0; font-family: 'Montserrat', Arial, sans-serif;">
-                        <div style="color: #d23c2f; font-size: 24px; font-weight: 700; margin-bottom: 15px;">${m.titulo}</div>
-                        <div style="color: #333333; font-size: 16px; line-height: 1.4;">${m.texto}</div>
+                    <td bgcolor="${m.corFundo}" style="${estiloDinamico} border-bottom: 0px solid #f0f0f0; font-family: 'Montserrat', Arial, sans-serif;">
+                        ${conteudoMateriaHtml}
                     </td>
                 </tr>
                 <tr><td style="padding: 10px;"></td></tr>`;
@@ -210,19 +355,99 @@
     }
 
     function exportarEmail() {
+        atualizarPreview();
+
         const tabela = document.getElementById('tabela-principal');
         tabela.setAttribute('width', '650');
         tabela.style.width = "650px";
+        tabela.style.maxWidth = "650px";
         
         const range = document.createRange();
         range.selectNode(document.getElementById('render-area'));
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
-        document.execCommand('copy');
-        alert("Boletim copiado com Montserrat e 650px de largura! Cole no seu e-mail.");
+        
+        try {
+            document.execCommand('copy');
+            alert("Conteúdo copiado. Basta colar no corpo do e-mail.");
+        } catch (err) {
+            alert("Erro ao copiar. Selecione manualmente o conteúdo.");
+        }
     }
 
-    // Inicialização do Sistema
+    // 🔴 FUNÇÃO DE PDF ATUALIZADA COM PROXY PARA BURLAR O CORS LOCAL
+    async function gerarPDFUnico() {
+        atualizarPreview();
+        
+        const btn = document.getElementById('btn-gerar-pdf');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "⏳ Processando Imagens e Gerando Arquivo...";
+        btn.disabled = true;
+
+        const element = document.getElementById('render-area');
+        const images = element.querySelectorAll('img');
+        const originalSrcs = [];
+
+        // PASSO 1: Converte as imagens URLs fixas em Base64 através de um Proxy Público
+        for (let i = 0; i < images.length; i++) {
+            const img = images[i];
+            originalSrcs.push(img.src);
+            
+            // Só processa as que vêm da internet e não são Base64 nativas
+            if (img.src.startsWith('http') && !img.src.includes('api.allorigins.win')) {
+                try {
+                    // Proxy gratuito que resolve o problema de CORS
+                    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(img.src);
+                    const response = await fetch(proxyUrl);
+                    const blob = await response.blob();
+                    const base64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                    img.src = base64; // Substitui temporariamente pelo código Base64
+                } catch (e) {
+                    console.warn("Proxy falhou para a imagem:", img.src);
+                }
+            }
+        }
+
+        // PASSO 2: Agora que as imagens estão em Base64, tira o "print" da tela
+        try {
+            const canvas = await html2canvas(element, {
+                scale: 2,           
+                useCORS: true,      
+                backgroundColor: '#ffffff'
+            });
+
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+            const pdfWidth = canvas.width;
+            const pdfHeight = canvas.height;
+            
+            const { jsPDF } = window.jspdf;
+            
+            const pdf = new jsPDF({
+                orientation: pdfWidth > pdfHeight ? 'l' : 'p',
+                unit: 'px',
+                format: [pdfWidth, pdfHeight]
+            });
+
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save('Boletim_InPress.pdf');
+
+        } catch (error) {
+            console.error(error);
+            alert("Houve um problema ao processar o PDF.");
+        } finally {
+            // PASSO 3: Devolve os links originais para que o botão "Copiar para E-mail" continue funcionando!
+            for (let i = 0; i < images.length; i++) {
+                images[i].src = originalSrcs[i];
+            }
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
     init();
 </script>
 
