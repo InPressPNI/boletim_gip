@@ -43,6 +43,8 @@
         .btn-export:hover { background: #218838; }
         .btn-pdf { background: #ff8400; color: white; }
         .btn-pdf:hover { background: #d35400; }
+        .btn-html { background: #6f42c1; color: white; }
+        .btn-html:hover { background: #5a32a3; }
         .btn-remove { background: #dc3545; color: white; width: auto; font-size: 10px; position: absolute; top: 10px; right: 10px; padding: 10px; }
         .btn-clear { background: #e60000; color: white; margin-top: 20px; font-size: 11px; padding: 8px; width: auto; display: block; margin-left: auto; margin-right: auto; }
         
@@ -73,8 +75,10 @@
     <button class="btn btn-add" onclick="adicionarMateria()">➕ Adicionar Nova Matéria</button>
     <hr>
     <button id="btn-gerar-pdf" class="btn btn-pdf" onclick="gerarPDFUnico()">📥 Baixar PDF</button>
+
+    <button class="btn btn-export" onclick="exportarEmail()">📋 Copiar para E-mail (Visual)</button>
     
-    <button class="btn btn-export" onclick="exportarEmail()">📋 Copiar para E-mail</button>
+    <button class="btn btn-html" onclick="exportarHTML()">💻 Copiar Código HTML</button>
     
     <button class="btn btn-clear" onclick="limparRascunho()">🗑️ Apagar rascunho</button>
 </div>
@@ -166,9 +170,10 @@
 
     function adicionarMateria() {
         const id = Date.now();
-        materias.push({ id, titulo: "Título da Matéria", texto: "", corFundo: "#ffffff", layout: "text-only", imagem: "" });
+        materias.push({ id, titulo: "Título da Matéria", texto: "", corFundo: "#ffffff", layout: "text-only", imagem: "", imagemAltaRes: "" });
         renderizarListaMaterias();
         salvarRascunho();
+        atualizarPreview();
     }
 
     function redimensionarImagemFisicamente(base64Str, maxWidth, callback) {
@@ -212,6 +217,8 @@
                 materias[index].layout = "img-top";
             }
             
+            materias[index].imagemAltaRes = base64Original;
+            
             const layoutAtual = materias[index].layout;
             const targetWidth = (layoutAtual === 'img-top') ? 590 : 190;
 
@@ -219,6 +226,7 @@
                 materias[index].imagem = resizedBase64; 
                 salvarRascunho();
                 renderizarListaMaterias(); 
+                atualizarPreview();
             });
         };
         reader.readAsDataURL(file);
@@ -226,9 +234,11 @@
 
     function removerImagemMateria(index) {
         materias[index].imagem = "";
+        materias[index].imagemAltaRes = "";
         materias[index].layout = "text-only";
         salvarRascunho();
         renderizarListaMaterias();
+        atualizarPreview();
     }
 
     function renderizarListaMaterias() {
@@ -271,7 +281,7 @@
                     </div>
                 </div>
 
-                <label>Carregar Imagem (Máx 1MB):</label>
+                <label>Carregar Imagem (Máx 2MB):</label>
                 <input type="file" accept="image/*" onchange="uploadImagemMateria(event, ${index})">
                 ${previewImagemHtml}
 
@@ -285,9 +295,9 @@
             quill.on('text-change', () => {
                 materias[index].texto = quill.root.innerHTML;
                 salvarRascunho();
+                atualizarPreview();
             });
         });
-        atualizarPreview();
     }
 
     function atualizarDadosMateria(i, campo, valor) {
@@ -299,15 +309,16 @@
                 alert("💡 Dica: Como você alterou o Layout, faça o upload da imagem novamente para que o sistema a redimensione no tamanho exato para este novo formato.");
             }
         }
+        atualizarPreview();
     }
 
     function remover(i) {
         materias.splice(i, 1);
         renderizarListaMaterias();
         salvarRascunho();
+        atualizarPreview();
     }
 
-    // 🔴 NOVA FUNÇÃO: Zera as margens de todos os parágrafos gerados pelo Quill
     function processarTextoEmail(htmlContent) {
         if (!htmlContent) return '';
         const parser = new DOMParser();
@@ -322,7 +333,7 @@
         return doc.body.innerHTML;
     }
 
-    function atualizarPreview() {
+    function atualizarPreview(isParaPDF = false) {
         const corpo = document.getElementById('corpo-boletim');
         const dDest = document.getElementById('data-destaque').value.trim();
         const tDest = document.getElementById('titulo-destaques').value.trim();
@@ -330,12 +341,10 @@
         const cDestRaw = editorDestaques ? editorDestaques.root.innerHTML : '';
         const cDestVazio = !cDestRaw || cDestRaw === '<p><br></p>' || cDestRaw.trim() === '';
         
-        // Zera margens do parágrafo dos Destaques
         const cDestProcessado = processarTextoEmail(cDestRaw);
 
         let html = "";
 
-        // Bloco de Destaques
         if (dDest || tDest || !cDestVazio) {
             html += `
                 <tr>
@@ -350,7 +359,6 @@
                 <tr><td style="padding: 10px;"></td></tr>`;
         }
 
-        // Imagem Fixa
         html += `<tr><td style="padding-bottom: 15px;">
                     <img src="${URL_IMAGEM_FIXA}" alt="Banner GIP" width="100%" style="display: block; width: 100%; max-width: 100%; height: auto; border-radius: 5px;">
                  </td></tr>`;
@@ -362,21 +370,21 @@
 
             let conteudoMateriaHtml = '';
             
-            // 🔴 LÓGICA DE TÍTULO OPCIONAL: Só cria o bloco se houver texto
             const tituloLimpo = m.titulo.trim();
             const tituloHtml = tituloLimpo !== "" 
                 ? `<div style="font-size: 24px; font-weight: 700; margin-bottom: 15px; margin-top: 15px; word-wrap: break-word; color: ${m.corFundo.toLowerCase() !== "#ffffff" ? '#000' : '#d23c2f'};">${tituloLimpo}</div>` 
                 : '';
 
-            // 🔴 APLICA ZERO MARGIN NOS PARÁGRAFOS DO TEXTO
             const textoLimpo = processarTextoEmail(m.texto);
             const textoHtml = `<div style="color: #333333; font-size: 16px; line-height: 1.5; word-wrap: break-word;">${textoLimpo}</div>`;
+
+            const fonteImagemAtual = (isParaPDF && m.imagemAltaRes) ? m.imagemAltaRes : m.imagem;
 
             if (m.layout === 'text-only' || !m.imagem) {
                 conteudoMateriaHtml = tituloHtml + textoHtml;
             } 
             else if (m.layout === 'img-top') {
-                const imgTagTop = `<img src="${m.imagem}" width="590" style="width: 100%; max-width: 590px; height: auto; display: block; border-radius: 5px; border: 0;">`;
+                const imgTagTop = `<img src="${fonteImagemAtual}" width="590" style="width: 100%; max-width: 590px; height: auto; display: block; border-radius: 5px; border: 0;">`;
                 conteudoMateriaHtml = `
                     ${tituloHtml}
                     <div style="margin-bottom: 15px;">${imgTagTop}</div>
@@ -384,7 +392,7 @@
                 `;
             } 
             else if (m.layout === 'img-left') {
-                const imgTagSide = `<img src="${m.imagem}" width="190" style="width: 190px; max-width: 190px; height: auto; display: block; border-radius: 5px; border: 0;">`;
+                const imgTagSide = `<img src="${fonteImagemAtual}" width="190" style="width: 190px; max-width: 190px; height: auto; display: block; border-radius: 5px; border: 0;">`;
                 conteudoMateriaHtml = `
                     ${tituloHtml}
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; width: 100%;">
@@ -396,7 +404,7 @@
                 `;
             } 
             else if (m.layout === 'img-right') {
-                const imgTagSide = `<img src="${m.imagem}" width="190" style="width: 190px; max-width: 190px; height: auto; display: block; border-radius: 5px; border: 0;">`;
+                const imgTagSide = `<img src="${fonteImagemAtual}" width="190" style="width: 190px; max-width: 190px; height: auto; display: block; border-radius: 5px; border: 0;">`;
                 conteudoMateriaHtml = `
                     ${tituloHtml}
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; width: 100%;">
@@ -421,7 +429,7 @@
     }
 
     function exportarEmail() {
-        atualizarPreview();
+        atualizarPreview(false);
 
         const tabela = document.getElementById('tabela-principal');
         tabela.setAttribute('width', '650');
@@ -435,14 +443,41 @@
         
         try {
             document.execCommand('copy');
-            alert("Conteúdo copiado! Margens removidas e layout limpo para o e-mail.");
+            alert("Conteúdo visual copiado! Cole diretamente no corpo de um e-mail novo.");
         } catch (err) {
             alert("Erro ao copiar. Selecione manualmente o conteúdo.");
         }
     }
 
+    // 🔴 NOVA FUNÇÃO: EXTRAIR E COPIAR HTML PURO PARA DISPARADORES
+    function exportarHTML() {
+        atualizarPreview(false); // Garante que puxa a versão com imagens protegidas e dimensionadas
+        
+        const tabela = document.getElementById('tabela-principal');
+        tabela.setAttribute('width', '650');
+        tabela.style.width = "650px";
+        tabela.style.maxWidth = "650px";
+        
+        const htmlCode = tabela.outerHTML;
+        
+        // Cria um elemento temporário invisível de texto para copiar o código puro (tags HTML)
+        const tempTextArea = document.createElement("textarea");
+        tempTextArea.value = htmlCode;
+        document.body.appendChild(tempTextArea);
+        tempTextArea.select();
+        
+        try {
+            document.execCommand('copy');
+            alert("Código HTML copiado com sucesso! Agora é só colar no bloco de HTML Customizado do seu disparador (Mailchimp, RD Station, etc).");
+        } catch (err) {
+            alert("Erro ao copiar o código HTML.");
+        } finally {
+            document.body.removeChild(tempTextArea); // Limpa o elemento temporário
+        }
+    }
+
     async function gerarPDFUnico() {
-        atualizarPreview();
+        atualizarPreview(true); 
         
         const btn = document.getElementById('btn-gerar-pdf');
         const originalText = btn.innerHTML;
@@ -455,12 +490,12 @@
 
         try {
             const canvas = await html2canvas(element, {
-                scale: 1.2,           
+                scale: 4,           
                 useCORS: true,      
                 backgroundColor: '#ffffff'
             });
 
-            const imgData = canvas.toDataURL('image/png');
+            const imgData = canvas.toDataURL('image/jpeg');
             const { jsPDF } = window.jspdf;
             
             const pdf = new jsPDF({
@@ -469,8 +504,8 @@
                 format: [pdfWidth, pdfHeight]
             });
 
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save('Análise_Política_GIP.pdf');
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save('Boletim_InPress.pdf');
 
         } catch (error) {
             console.error(error);
@@ -478,6 +513,7 @@
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;
+            atualizarPreview(false); 
         }
     }
 
