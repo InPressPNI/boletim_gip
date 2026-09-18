@@ -13,8 +13,7 @@
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <script src="https://unpkg.com/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Bibliotecas de PDF por imagem removidas, pois agora usamos impressão nativa -->
     
     <style>
         :root { --primary: #000000; --bg: #f4f7f6; --accent: #d23c2f; }
@@ -25,6 +24,17 @@
             #preview-panel { width: 60%; padding: 40px 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: #fcfcfc; }
             #render-area { background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 650px; transition: all 0.3s ease; }
             .no-print { display: block; }
+        }
+
+        /* 🔴 NOVO: Regras de Impressão Nativa extraídas do arquivo de referência */
+        @media print {
+            body { background: white !important; display: block !important; overflow: visible !important; }
+            #editor-panel, .no-print, .btn, hr { display: none !important; }
+            #preview-panel { width: 100% !important; padding: 0 !important; background: white !important; overflow: visible !important; display: block !important; }
+            #render-area { background: white !important; box-shadow: none !important; margin: 0 auto !important; display: block !important; }
+            
+            td, tr, img, table { page-break-inside: avoid !important; break-inside: avoid !important; }
+            a { text-decoration: none !important; color: inherit !important; }
         }
 
         h2 { font-weight: 800; color: var(--primary); margin-top: 0; border-bottom: 1px solid var(--primary); padding-bottom: 10px; }
@@ -56,10 +66,10 @@
         .ql-editor { word-break: break-word; overflow-wrap: break-word; }
         .ql-editor img { max-width: 100%; height: auto; }
         .ql-image-resize-handler { background-color: var(--accent) !important; border: 1px solid white !important; }
-         ul.language img{ width: 25px; }
-         ul.language{ list-style:none; display: inline-flex; padding: 0; margin: 0; align-items: center; float: right;}
-         ul.language li{ padding-right: 10px;}
-         ul.language li{ padding-right: 10px; font-size: 12px;}
+        ul.language img{ width: 25px; }
+        ul.language{ list-style:none; display: inline-flex; padding: 0; margin: 0; align-items: center; float: right;}
+        ul.language li{ padding-right: 10px;}
+        ul.language li{ padding-right: 10px; font-size: 12px;}
 
     </style>
 </head>
@@ -68,9 +78,8 @@
 <div id="editor-panel" class="no-print">
 
     <h2>EDITOR
-        <ul  class="language">
+        <ul class="language">
             <li>Mudar para</li>
-            <!-- <li><a href="index.html"><img src="https://raw.githubusercontent.com/InPressPNI/boletim_gip/9215c7d2c3ae8d976644ad4d4c891257b0fb395e/br.svg"></a></li> -->
             <li><a href="en.html"><img src="https://raw.githubusercontent.com/InPressPNI/boletim_gip/9215c7d2c3ae8d976644ad4d4c891257b0fb395e/en.svg"></a></li>
         </ul>
     </h2>
@@ -86,7 +95,9 @@
     
     <button class="btn btn-add" onclick="adicionarMateria()">➕ Adicionar Nova Matéria</button>
     <hr>
-    <button id="btn-gerar-pdf" class="btn btn-pdf" onclick="gerarPDFUnico()">📥 Baixar PDF</button>
+    
+    <!-- Alterado para a função dinâmica de impressão -->
+    <button id="btn-gerar-pdf" class="btn btn-pdf" onclick="gerarPDFDinamico()">📥 Salvar / Imprimir PDF</button>
 
     <button class="btn btn-export" onclick="exportarEmail()">📋 Copiar para E-mail (Visual)</button>
     
@@ -388,7 +399,7 @@
                 : '';
 
             const textoLimpo = processarTextoEmail(m.texto);
-            const textoHtml = `<div style="color: #333333; font-size: 16px; line-height: 1.5; word-wrap: break-word;">${textoLimpo}</div>`;
+            const textoHtml = `<div style="color: #333333; font-size: 19px; line-height: 1.5; word-wrap: break-word;">${textoLimpo}</div>`;
 
             const fonteImagemAtual = (isParaPDF && m.imagemAltaRes) ? m.imagemAltaRes : m.imagem;
 
@@ -461,9 +472,8 @@
         }
     }
 
-    // 🔴 NOVA FUNÇÃO: EXTRAIR E COPIAR HTML PURO PARA DISPARADORES
     function exportarHTML() {
-        atualizarPreview(false); // Garante que puxa a versão com imagens protegidas e dimensionadas
+        atualizarPreview(false);
         
         const tabela = document.getElementById('tabela-principal');
         tabela.setAttribute('width', '650');
@@ -472,7 +482,6 @@
         
         const htmlCode = tabela.outerHTML;
         
-        // Cria um elemento temporário invisível de texto para copiar o código puro (tags HTML)
         const tempTextArea = document.createElement("textarea");
         tempTextArea.value = htmlCode;
         document.body.appendChild(tempTextArea);
@@ -484,49 +493,62 @@
         } catch (err) {
             alert("Erro ao copiar o código HTML.");
         } finally {
-            document.body.removeChild(tempTextArea); // Limpa o elemento temporário
+            document.body.removeChild(tempTextArea);
         }
     }
 
-    async function gerarPDFUnico() {
-        atualizarPreview(true); 
+    // 🔴 NOVA FUNÇÃO DE PDF: Usa o formato nativo do navegador p/ textos selecionáveis
+    function gerarPDFDinamico() {
+        // Injeta as imagens originais de alta qualidade no HTML
+        atualizarPreview(true);
         
         const btn = document.getElementById('btn-gerar-pdf');
         const originalText = btn.innerHTML;
-        btn.innerHTML = "⏳ Gerando PDF em Alta Definição...";
+        btn.innerHTML = "⏳ Preparando Impressão...";
         btn.disabled = true;
 
-        const element = document.getElementById('render-area');
-        const pdfWidth = element.offsetWidth; 
-        const pdfHeight = element.offsetHeight;
-
-        try {
-            const canvas = await html2canvas(element, {
-                scale: 4,           
-                useCORS: true,      
-                backgroundColor: '#ffffff'
-            });
-
-            const imgData = canvas.toDataURL('image/jpeg');
-            const { jsPDF } = window.jspdf;
+        // Damos meio segundo para o navegador processar as imagens pesadas antes de chamar a impressão
+        setTimeout(() => {
+            const elemento = document.getElementById('render-area');
+            if (!elemento) return;
             
-            const pdf = new jsPDF({
-                orientation: pdfWidth > pdfHeight ? 'l' : 'p',
-                unit: 'px',
-                format: [pdfWidth, pdfHeight]
-            });
+            // Calcula a altura total da página para criar um PDF sem cortes (1 única página infinita)
+            const alturaReal = elemento.offsetHeight;
+            const antigoEstilo = document.getElementById('estilo-impressao-dinamica');
+            if (antigoEstilo) antigoEstilo.remove();
+            
+            const larguraBase = 650;
+            const estilo = document.createElement('style');
+            estilo.id = 'estilo-impressao-dinamica';
+            estilo.innerHTML = `
+                @media print { 
+                    @page { size: ${larguraBase}px ${alturaReal}px !important; margin: 0 !important; } 
+                    body, html { margin: 0 !important; padding: 0 !important; height: ${alturaReal}px !important; overflow: hidden !important; }
+                }
+            `;
+            document.head.appendChild(estilo);
 
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save('Boletim_InPress.pdf');
+            // Reverte as imagens de volta para a versão blindada do e-mail assim que a tela de impressão fechar
+            window.onafterprint = function() {
+                atualizarPreview(false);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                window.onafterprint = null;
+            };
 
-        } catch (error) {
-            console.error(error);
-            alert("Houve um problema ao processar o PDF.");
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            atualizarPreview(false); 
-        }
+            // Chama a tela nativa (Ctrl+P / Salvar como PDF)
+            window.print();
+
+            // Fallback de segurança caso a janela seja fechada à força em navegadores que não suportam 'onafterprint'
+            setTimeout(() => {
+                if (btn.disabled) {
+                    atualizarPreview(false);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            }, 2000);
+
+        }, 500); 
     }
 
     init();
